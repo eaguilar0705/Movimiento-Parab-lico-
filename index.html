@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Experimento del Mono - DBZ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <span class="badge">Física Aplicada • Dragon Ball Z</span>
+        <h1>Experimento del Mono</h1>
+        <p>
+          Krillin apunta automáticamente al Ozaru. Al lanzar el Kienzan, el Ozaru cae al mismo tiempo.
+          Como ambos tienen la misma aceleración gravitatoria, sus trayectorias se encuentran.
+        </p>
+      </div>
+    </header>
+
+    <section class="simulation-card">
+      <div id="world" class="world">
+        <svg id="svgLayer" class="svg-layer"></svg>
+
+        <div id="krillin" class="character krillin">
+          <img src="assets/krillin.png" alt="Krillin" data-fallback />
+          <span>Krillin</span>
+        </div>
+
+        <div id="ozaru" class="character ozaru">
+          <img src="assets/ozaru.png" alt="Ozaru" data-fallback />
+          <span>Ozaru</span>
+        </div>
+
+        <div id="kienzan" class="kienzan"></div>
+        <div id="impact" class="impact"></div>
+
+        <div class="ground-line"></div>
+
+        <div class="world-chip left">Krillin / Lanzador</div>
+        <div class="world-chip right">Ozaru / Objetivo en caída</div>
+      </div>
+    </section>
+
+    <section class="dashboard">
+      <form id="paramsForm" class="params-grid">
+        <label class="input-card">
+          <span>Velocidad inicial</span>
+          <div class="number-row">
+            <input id="velocityInput" type="number" min="5" max="80" step="1" value="35" />
+            <strong>m/s</strong>
+          </div>
+        </label>
+
+        <label class="input-card">
+          <span>Distancia horizontal</span>
+          <div class="number-row">
+            <input id="distanceInput" type="number" min="15" max="100" step="1" value="55" />
+            <strong>m</strong>
+          </div>
+        </label>
+
+        <label class="input-card">
+          <span>Altura inicial del Ozaru</span>
+          <div class="number-row">
+            <input id="targetHeightInput" type="number" min="8" max="65" step="1" value="30" />
+            <strong>m</strong>
+          </div>
+        </label>
+
+        <label class="input-card">
+          <span>Altura del cañón</span>
+          <div class="number-row">
+            <input id="launchHeightInput" type="number" min="0" max="25" step="1" value="2" />
+            <strong>m</strong>
+          </div>
+        </label>
+
+        <div class="button-group">
+          <button type="submit" class="primary-btn">Lanzar Kienzan</button>
+          <button type="button" id="resetBtn" class="secondary-btn">Reiniciar</button>
+        </div>
+      </form>
+
+      <section class="telemetry">
+        <div class="telemetry-card">
+          <span>Ángulo automático</span>
+          <strong id="angleStat">0°</strong>
+        </div>
+
+        <div class="telemetry-card">
+          <span>Gravedad</span>
+          <strong>9.81 m/s²</strong>
+        </div>
+
+        <div class="telemetry-card">
+          <span>Tiempo de impacto</span>
+          <strong id="impactTimeStat">0.00 s</strong>
+        </div>
+
+        <div class="telemetry-card">
+          <span>Tiempo actual</span>
+          <strong id="currentTimeStat">0.00 s</strong>
+        </div>
+
+        <div class="telemetry-card wide">
+          <span>Kienzan</span>
+          <strong id="projectileStat">x: 0.0 m | y: 0.0 m</strong>
+        </div>
+
+        <div class="telemetry-card wide">
+          <span>Ozaru</span>
+          <strong id="monkeyStat">x: 0.0 m | y: 0.0 m</strong>
+        </div>
+      </section>
+
+      <div id="statusBox" class="status">
+        Ajusta los parámetros. El ángulo se calcula automáticamente hacia la posición inicial del Ozaru.
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
