@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Experimento del Mono - DBZ</title>
+  <title>Proyecto Movimiento Parabólico</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="app">
-    <header class="hero">
+    <header class="header">
       <div>
-        <span class="badge">Física Aplicada • Dragon Ball Z</span>
-        <h1>Experimento del Mono</h1>
+        <span class="badge">Proyecto Física Aplicada</span>
+        <h1>Movimiento Parabólico</h1>
         <p>
-          Krillin apunta automáticamente al Ozaru. Al lanzar el Kienzan, el Ozaru cae al mismo tiempo.
-          Como ambos tienen la misma aceleración gravitatoria, sus trayectorias se encuentran.
+          Simulación del experimento del mono y el proyectil usando cinemática,
+          caída libre y detección de choque menor a 1 mm.
         </p>
       </div>
     </header>
@@ -35,89 +35,102 @@
 
         <div id="kienzan" class="kienzan"></div>
         <div id="impact" class="impact"></div>
-
         <div class="ground-line"></div>
 
-        <div class="world-chip left">Krillin / Lanzador</div>
-        <div class="world-chip right">Ozaru / Objetivo en caída</div>
+        <div class="world-label left">Lanzador</div>
+        <div class="world-label right">Objetivo en caída</div>
       </div>
     </section>
 
     <section class="dashboard">
-      <form id="paramsForm" class="params-grid">
-        <label class="input-card">
+      <form id="paramsForm" class="controls">
+        <label class="control-card">
           <span>Velocidad inicial</span>
-          <div class="number-row">
+          <div class="input-row">
             <input id="velocityInput" type="number" min="5" max="80" step="1" value="35" />
             <strong>m/s</strong>
           </div>
         </label>
 
-        <label class="input-card">
+        <label class="control-card">
           <span>Distancia horizontal</span>
-          <div class="number-row">
+          <div class="input-row">
             <input id="distanceInput" type="number" min="15" max="100" step="1" value="55" />
             <strong>m</strong>
           </div>
         </label>
 
-        <label class="input-card">
-          <span>Altura inicial del Ozaru</span>
-          <div class="number-row">
+        <label class="control-card">
+          <span>Altura del objetivo</span>
+          <div class="input-row">
             <input id="targetHeightInput" type="number" min="8" max="65" step="1" value="30" />
             <strong>m</strong>
           </div>
         </label>
 
-        <label class="input-card">
+        <label class="control-card">
           <span>Altura del cañón</span>
-          <div class="number-row">
+          <div class="input-row">
             <input id="launchHeightInput" type="number" min="0" max="25" step="1" value="2" />
             <strong>m</strong>
           </div>
         </label>
 
+        <label class="control-card">
+          <span>Velocidad visual</span>
+          <div class="input-row">
+            <input id="visualSpeedInput" type="number" min="0.5" max="3" step="0.1" value="1.6" />
+            <strong>x</strong>
+          </div>
+        </label>
+
         <div class="button-group">
-          <button type="submit" class="primary-btn">Lanzar Kienzan</button>
+          <button type="submit" class="primary-btn">Iniciar</button>
+          <button type="button" id="stopBtn" class="danger-btn">Detener</button>
           <button type="button" id="resetBtn" class="secondary-btn">Reiniciar</button>
         </div>
       </form>
 
       <section class="telemetry">
-        <div class="telemetry-card">
-          <span>Ángulo automático</span>
-          <strong id="angleStat">0°</strong>
-        </div>
-
-        <div class="telemetry-card">
+        <div class="data-card">
           <span>Gravedad</span>
           <strong>9.81 m/s²</strong>
         </div>
 
-        <div class="telemetry-card">
-          <span>Tiempo de impacto</span>
-          <strong id="impactTimeStat">0.00 s</strong>
+        <div class="data-card">
+          <span>Ángulo automático</span>
+          <strong id="angleStat">0°</strong>
         </div>
 
-        <div class="telemetry-card">
+        <div class="data-card">
           <span>Tiempo actual</span>
-          <strong id="currentTimeStat">0.00 s</strong>
+          <strong id="timeStat">0.000 s</strong>
         </div>
 
-        <div class="telemetry-card wide">
-          <span>Kienzan</span>
-          <strong id="projectileStat">x: 0.0 m | y: 0.0 m</strong>
+        <div class="data-card">
+          <span>Tiempo de choque</span>
+          <strong id="impactTimeStat">0.000 s</strong>
         </div>
 
-        <div class="telemetry-card wide">
-          <span>Ozaru</span>
-          <strong id="monkeyStat">x: 0.0 m | y: 0.0 m</strong>
+        <div class="data-card wide">
+          <span>Posición del proyectil</span>
+          <strong id="projectilePositionStat">x: 0.000 m | y: 0.000 m</strong>
+        </div>
+
+        <div class="data-card wide">
+          <span>Posición del objetivo</span>
+          <strong id="targetPositionStat">x: 0.000 m | y: 0.000 m</strong>
+        </div>
+
+        <div class="data-card wide">
+          <span>Distancia entre objetos</span>
+          <strong id="distanceBetweenStat">0.000000000 m</strong>
+        </div>
+
+        <div id="statusBox" class="status">
+          Ajusta los parámetros y presiona iniciar.
         </div>
       </section>
-
-      <div id="statusBox" class="status">
-        Ajusta los parámetros. El ángulo se calcula automáticamente hacia la posición inicial del Ozaru.
-      </div>
     </section>
   </main>
 

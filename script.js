@@ -1,20 +1,50 @@
+/*
+  Mini-proyecto: Movimiento Parabólico
+  Escenario: Experimento del mono y el proyectil.
+
+  Fórmulas usadas:
+
+  1) Ángulo automático:
+     θ = atan2(H - h0, D)
+
+  2) Componentes de la velocidad:
+     vx = v0 cos(θ)
+     vy = v0 sin(θ)
+
+  3) Posición del proyectil:
+     xp(t) = vx · t
+     yp(t) = h0 + vy · t - (1/2) · g · t²
+
+  4) Posición del objetivo en caída:
+     xm(t) = D
+     ym(t) = H - (1/2) · g · t²
+
+  5) Distancia entre objetos:
+     d = √((xp - xm)² + (yp - ym)²)
+
+  6) Choque:
+     si d < 0.001 m, ocurre el choque.
+
+  Donde:
+     g  = 9.81 m/s²
+     D  = distancia horizontal
+     H  = altura inicial del objetivo
+     h0 = altura inicial del cañón
+     v0 = velocidad inicial
+*/
+
 const G = 9.81;
+const COLLISION_THRESHOLD = 0.001;
 
 const state = {
   running: false,
+  stopped: false,
   animationId: null,
   startTimestamp: 0,
-
-  animationDurationMs: 1400,
-  minAnimationDurationMs: 900,
-  maxAnimationDurationMs: 1700,
-  msPerPhysicalSecond: 520,
-
   projectileTrail: [],
-  monkeyTrail: [],
-
-  lastParams: null,
-  lastScale: null
+  targetTrail: [],
+  params: null,
+  scale: null
 };
 
 const ui = {
@@ -24,14 +54,17 @@ const ui = {
   distanceInput: document.getElementById("distanceInput"),
   targetHeightInput: document.getElementById("targetHeightInput"),
   launchHeightInput: document.getElementById("launchHeightInput"),
+  visualSpeedInput: document.getElementById("visualSpeedInput"),
 
   angleStat: document.getElementById("angleStat"),
+  timeStat: document.getElementById("timeStat"),
   impactTimeStat: document.getElementById("impactTimeStat"),
-  currentTimeStat: document.getElementById("currentTimeStat"),
-  projectileStat: document.getElementById("projectileStat"),
-  monkeyStat: document.getElementById("monkeyStat"),
+  projectilePositionStat: document.getElementById("projectilePositionStat"),
+  targetPositionStat: document.getElementById("targetPositionStat"),
+  distanceBetweenStat: document.getElementById("distanceBetweenStat"),
   statusBox: document.getElementById("statusBox"),
 
+  stopBtn: document.getElementById("stopBtn"),
   resetBtn: document.getElementById("resetBtn"),
 
   world: document.getElementById("world"),
@@ -48,14 +81,16 @@ init();
 function init() {
   setupImageFallbacks();
 
-  ui.form.addEventListener("submit", launch);
-  ui.resetBtn.addEventListener("click", reset);
+  ui.form.addEventListener("submit", startSimulation);
+  ui.stopBtn.addEventListener("click", stopSimulation);
+  ui.resetBtn.addEventListener("click", resetSimulation);
 
   [
     ui.velocityInput,
     ui.distanceInput,
     ui.targetHeightInput,
-    ui.launchHeightInput
+    ui.launchHeightInput,
+    ui.visualSpeedInput
   ].forEach((input) => {
     input.addEventListener("input", prepareScene);
     input.addEventListener("change", prepareScene);
@@ -71,38 +106,30 @@ function setupImageFallbacks() {
     img.addEventListener("error", () => {
       img.style.display = "none";
 
-      const label = img.nextElementSibling;
-      if (label) {
-        label.style.display = "grid";
+      const fallback = img.nextElementSibling;
+      if (fallback) {
+        fallback.style.display = "grid";
       }
     });
   });
 }
 
-function getParams() {
+function getParameters() {
   const velocity = clampNumber(ui.velocityInput, 5, 80);
   const distance = clampNumber(ui.distanceInput, 15, 100);
   const targetHeight = clampNumber(ui.targetHeightInput, 8, 65);
   const launchHeight = clampNumber(ui.launchHeightInput, 0, 25);
+  const visualSpeed = clampNumber(ui.visualSpeedInput, 0.5, 3);
 
-  const dx = distance;
-  const dy = targetHeight - launchHeight;
+  const deltaX = distance;
+  const deltaY = targetHeight - launchHeight;
 
-  /*
-    Experimento del mono:
-    El usuario NO controla el ángulo.
-    Krillin apunta directamente a la posición inicial del Ozaru.
-  */
-  const angleRad = Math.atan2(dy, dx);
+  const angleRad = Math.atan2(deltaY, deltaX);
   const angleDeg = radiansToDegrees(angleRad);
 
   const vx = velocity * Math.cos(angleRad);
   const vy = velocity * Math.sin(angleRad);
 
-  /*
-    Tiempo exacto para que el Kienzan llegue a la misma posición horizontal del Ozaru.
-    En ese mismo tiempo, ambos caen lo mismo por gravedad.
-  */
   const impactTime = distance / vx;
 
   const impactPoint = {
@@ -115,6 +142,7 @@ function getParams() {
     distance,
     targetHeight,
     launchHeight,
+    visualSpeed,
     angleRad,
     angleDeg,
     vx,
@@ -131,7 +159,7 @@ function projectilePosition(params, t) {
   };
 }
 
-function monkeyPosition(params, t) {
+function targetPosition(params, t) {
   return {
     x: params.distance,
     y: params.targetHeight - 0.5 * G * t * t
@@ -141,11 +169,6 @@ function monkeyPosition(params, t) {
 function createScale(params) {
   const rect = ui.world.getBoundingClientRect();
 
-  /*
-    Escala dinámica:
-    Si el impacto ocurre más abajo, el plano se expande para mantener visible
-    al Ozaru, el Kienzan y el punto de encuentro.
-  */
   const minY = Math.min(0, params.impactPoint.y - 12);
   const maxY = Math.max(
     params.targetHeight,
@@ -156,17 +179,10 @@ function createScale(params) {
   return {
     width: rect.width,
     height: rect.height,
-
     paddingLeft: Math.max(70, rect.width * 0.075),
     paddingRight: Math.max(85, rect.width * 0.075),
-
-    /*
-      Espacio extra arriba/abajo para que el Ozaru no desaparezca
-      cuando modificas alturas.
-    */
     paddingTop: Math.max(130, rect.height * 0.19),
     paddingBottom: Math.max(135, rect.height * 0.19),
-
     maxX: params.distance * 1.18,
     minY,
     maxY
@@ -187,25 +203,22 @@ function worldToScreen(point, scale) {
 }
 
 function prepareScene() {
-  stopAnimation();
+  stopFrame();
 
-  const params = getParams();
+  const params = getParameters();
   const scale = createScale(params);
 
-  state.lastParams = params;
-  state.lastScale = scale;
+  state.running = false;
+  state.stopped = false;
   state.projectileTrail = [];
-  state.monkeyTrail = [];
+  state.targetTrail = [];
+  state.params = params;
+  state.scale = scale;
 
   drawStaticScene(params, scale);
-  positionEntities(params, scale, 0);
-
+  positionObjects(params, scale, 0);
   updateStaticTelemetry(params);
-  updateLiveTelemetry(
-    0,
-    projectilePosition(params, 0),
-    monkeyPosition(params, 0)
-  );
+  updateLiveTelemetry(0, projectilePosition(params, 0), targetPosition(params, 0));
 
   ui.kienzan.classList.remove("active");
   ui.ozaru.classList.remove("falling");
@@ -213,7 +226,7 @@ function prepareScene() {
 
   ui.statusBox.className = "status";
   ui.statusBox.textContent =
-    "Listo. El ángulo fue calculado automáticamente para apuntar a la posición inicial del Ozaru.";
+    "Listo. Ajusta los parámetros y presiona iniciar.";
 }
 
 function drawStaticScene(params, scale) {
@@ -224,7 +237,7 @@ function drawStaticScene(params, scale) {
     scale
   );
 
-  const monkeyInitialScreen = worldToScreen(
+  const targetInitialScreen = worldToScreen(
     { x: params.distance, y: params.targetHeight },
     scale
   );
@@ -246,8 +259,8 @@ function drawStaticScene(params, scale) {
       class="aim-line"
       x1="${launchScreen.x}"
       y1="${launchScreen.y}"
-      x2="${monkeyInitialScreen.x}"
-      y2="${monkeyInitialScreen.y}"
+      x2="${targetInitialScreen.x}"
+      y2="${targetInitialScreen.y}"
     ></line>
 
     <path
@@ -257,15 +270,15 @@ function drawStaticScene(params, scale) {
     ></path>
 
     <path
-      id="monkeyPath"
-      class="monkey-path"
+      id="targetPath"
+      class="target-path"
       d=""
     ></path>
 
     <circle
       class="initial-point"
-      cx="${monkeyInitialScreen.x}"
-      cy="${monkeyInitialScreen.y}"
+      cx="${targetInitialScreen.x}"
+      cy="${targetInitialScreen.y}"
       r="6"
     ></circle>
 
@@ -278,7 +291,7 @@ function drawStaticScene(params, scale) {
   `;
 }
 
-function positionEntities(params, scale, t) {
+function positionObjects(params, scale, t) {
   const launchScreen = worldToScreen(
     { x: 0, y: params.launchHeight },
     scale
@@ -289,49 +302,39 @@ function positionEntities(params, scale, t) {
     scale
   );
 
-  const monkeyScreen = worldToScreen(
-    monkeyPosition(params, t),
+  const targetScreen = worldToScreen(
+    targetPosition(params, t),
     scale
   );
 
-  /*
-    Krillin queda anclado al punto de lanzamiento.
-  */
   ui.krillin.style.left = `${launchScreen.x}px`;
   ui.krillin.style.top = `${launchScreen.y}px`;
 
-  /*
-    El Kienzan representa el centro físico del proyectil.
-  */
   ui.kienzan.style.left = `${projectileScreen.x}px`;
   ui.kienzan.style.top = `${projectileScreen.y}px`;
 
-  /*
-    El Ozaru queda centrado en su posición física.
-    Así el impacto se ve más realista.
-  */
-  ui.ozaru.style.left = `${monkeyScreen.x}px`;
-  ui.ozaru.style.top = `${monkeyScreen.y}px`;
+  ui.ozaru.style.left = `${targetScreen.x}px`;
+  ui.ozaru.style.top = `${targetScreen.y}px`;
 }
 
-function launch(event) {
+function startSimulation(event) {
   event.preventDefault();
 
-  stopAnimation();
+  stopFrame();
 
-  const params = getParams();
+  const params = getParameters();
   const scale = createScale(params);
 
-  state.lastParams = params;
-  state.lastScale = scale;
-  state.projectileTrail = [];
-  state.monkeyTrail = [];
   state.running = true;
+  state.stopped = false;
+  state.projectileTrail = [];
+  state.targetTrail = [];
+  state.params = params;
+  state.scale = scale;
   state.startTimestamp = performance.now();
-  state.animationDurationMs = getAnimationDurationMs(params);
 
   drawStaticScene(params, scale);
-  positionEntities(params, scale, 0);
+  positionObjects(params, scale, 0);
   updateStaticTelemetry(params);
 
   ui.kienzan.classList.add("active");
@@ -340,7 +343,7 @@ function launch(event) {
 
   ui.statusBox.className = "status";
   ui.statusBox.textContent =
-    "Lanzamiento iniciado: el Ozaru cae justo cuando Krillin lanza el Kienzan.";
+    "Animación iniciada.";
 
   state.animationId = requestAnimationFrame(animate);
 }
@@ -348,139 +351,146 @@ function launch(event) {
 function animate(timestamp) {
   if (!state.running) return;
 
-  const params = state.lastParams;
-  const scale = state.lastScale;
+  const params = state.params;
+  const scale = state.scale;
 
-  const elapsedMs = timestamp - state.startTimestamp;
-  const progress = Math.min(elapsedMs / state.animationDurationMs, 1);
+  const elapsedSeconds =
+    ((timestamp - state.startTimestamp) / 1000) * params.visualSpeed;
 
-  /*
-    El tiempo físico simulado avanza desde 0 hasta el tiempo exacto de impacto.
-    Ambos objetos usan el mismo t, por eso caen sincronizados.
-  */
-  const t = params.impactTime * progress;
+  const t = Math.min(elapsedSeconds, params.impactTime);
 
-  const projectileWorld = projectilePosition(params, t);
-  const monkeyWorld = monkeyPosition(params, t);
+  const projectile = projectilePosition(params, t);
+  const target = targetPosition(params, t);
+  const distance = distanceBetween(projectile, target);
 
-  const projectileScreen = worldToScreen(projectileWorld, scale);
-  const monkeyScreen = worldToScreen(monkeyWorld, scale);
+  const projectileScreen = worldToScreen(projectile, scale);
+  const targetScreen = worldToScreen(target, scale);
 
   state.projectileTrail.push(projectileScreen);
-  state.monkeyTrail.push(monkeyScreen);
+  state.targetTrail.push(targetScreen);
 
-  positionEntities(params, scale, t);
+  positionObjects(params, scale, t);
   drawLivePaths();
-  updateLiveTelemetry(t, projectileWorld, monkeyWorld);
+  updateLiveTelemetry(t, projectile, target);
 
-  /*
-    Se finaliza exactamente en el tiempo matemático de impacto.
-    Así siempre se encuentran.
-  */
-  if (progress >= 1) {
-    finishImpactExact(params, scale);
+  if (distance < COLLISION_THRESHOLD || t >= params.impactTime) {
+    finishCollision();
     return;
   }
 
   state.animationId = requestAnimationFrame(animate);
 }
 
-function finishImpactExact(params, scale) {
-  const exactProjectileWorld = projectilePosition(params, params.impactTime);
-  const exactMonkeyWorld = monkeyPosition(params, params.impactTime);
+function finishCollision() {
+  const params = state.params;
+  const scale = state.scale;
 
-  const exactProjectileScreen = worldToScreen(exactProjectileWorld, scale);
-  const exactMonkeyScreen = worldToScreen(exactMonkeyWorld, scale);
+  const projectile = projectilePosition(params, params.impactTime);
+  const target = targetPosition(params, params.impactTime);
+  const distance = distanceBetween(projectile, target);
 
-  state.projectileTrail.push(exactProjectileScreen);
-  state.monkeyTrail.push(exactMonkeyScreen);
+  const projectileScreen = worldToScreen(projectile, scale);
+  const targetScreen = worldToScreen(target, scale);
+
+  state.projectileTrail.push(projectileScreen);
+  state.targetTrail.push(targetScreen);
 
   drawLivePaths();
+  positionObjects(params, scale, params.impactTime);
+  updateLiveTelemetry(params.impactTime, projectile, target);
 
   state.running = false;
+  state.stopped = false;
+  stopFrame();
 
   ui.kienzan.classList.remove("active");
   ui.ozaru.classList.remove("falling");
 
-  positionEntities(params, scale, params.impactTime);
-
-  ui.impact.style.left = `${exactMonkeyScreen.x}px`;
-  ui.impact.style.top = `${exactMonkeyScreen.y}px`;
+  ui.impact.style.left = `${targetScreen.x}px`;
+  ui.impact.style.top = `${targetScreen.y}px`;
 
   ui.impact.classList.remove("active");
   void ui.impact.offsetWidth;
   ui.impact.classList.add("active");
 
-  updateLiveTelemetry(
-    params.impactTime,
-    exactProjectileWorld,
-    exactMonkeyWorld
-  );
-
-  const distance = distanceBetween(exactProjectileWorld, exactMonkeyWorld);
-
   ui.statusBox.className = "status success";
+
+  if (distance < COLLISION_THRESHOLD) {
+    ui.statusBox.textContent =
+      `Choque detectado. Distancia: ${distance.toFixed(9)} m.`;
+  } else {
+    ui.statusBox.textContent =
+      `Choque confirmado. Distancia: ${distance.toFixed(9)} m.`;
+  }
+}
+
+function stopSimulation() {
+  if (!state.running) {
+    ui.statusBox.className = "status stopped";
+    ui.statusBox.textContent =
+      "La animación ya está detenida.";
+    return;
+  }
+
+  state.running = false;
+  state.stopped = true;
+
+  stopFrame();
+
+  ui.kienzan.classList.remove("active");
+  ui.ozaru.classList.remove("falling");
+
+  ui.statusBox.className = "status stopped";
   ui.statusBox.textContent =
-    `¡Impacto confirmado! Distancia entre centros: ${distance.toFixed(6)} m. ` +
-    "El Kienzan y el Ozaru se tocaron porque ambos caen con la misma aceleración gravitatoria.";
+    "Animación detenida.";
 }
 
-function drawLivePaths() {
-  const projectilePath = document.getElementById("projectilePath");
-  const monkeyPath = document.getElementById("monkeyPath");
-
-  if (projectilePath) {
-    projectilePath.setAttribute("d", pointsToPath(state.projectileTrail));
-  }
-
-  if (monkeyPath) {
-    monkeyPath.setAttribute("d", pointsToPath(state.monkeyTrail));
-  }
-}
-
-function updateStaticTelemetry(params) {
-  ui.angleStat.textContent = `${params.angleDeg.toFixed(2)}°`;
-  ui.impactTimeStat.textContent = `${params.impactTime.toFixed(2)} s`;
-}
-
-function updateLiveTelemetry(t, projectile, monkey) {
-  ui.currentTimeStat.textContent = `${t.toFixed(2)} s`;
-
-  ui.projectileStat.textContent =
-    `x: ${projectile.x.toFixed(1)} m | y: ${projectile.y.toFixed(1)} m`;
-
-  ui.monkeyStat.textContent =
-    `x: ${monkey.x.toFixed(1)} m | y: ${monkey.y.toFixed(1)} m`;
-}
-
-function reset() {
-  stopAnimation();
+function resetSimulation() {
   prepareScene();
 
   ui.statusBox.className = "status";
   ui.statusBox.textContent =
-    "Simulación reiniciada. Puedes cambiar los parámetros y lanzar de nuevo.";
+    "Simulación reiniciada.";
 }
 
-function stopAnimation() {
-  state.running = false;
-
+function stopFrame() {
   if (state.animationId) {
     cancelAnimationFrame(state.animationId);
     state.animationId = null;
   }
 }
 
-function getAnimationDurationMs(params) {
-  /*
-    Hace que el Ozaru y el Kienzan se muevan rápido y sincronizados.
-    No altera la física, solo comprime el tiempo visual.
-  */
-  return clamp(
-    params.impactTime * state.msPerPhysicalSecond,
-    state.minAnimationDurationMs,
-    state.maxAnimationDurationMs
-  );
+function drawLivePaths() {
+  const projectilePath = document.getElementById("projectilePath");
+  const targetPath = document.getElementById("targetPath");
+
+  if (projectilePath) {
+    projectilePath.setAttribute("d", pointsToPath(state.projectileTrail));
+  }
+
+  if (targetPath) {
+    targetPath.setAttribute("d", pointsToPath(state.targetTrail));
+  }
+}
+
+function updateStaticTelemetry(params) {
+  ui.angleStat.textContent = `${params.angleDeg.toFixed(3)}°`;
+  ui.impactTimeStat.textContent = `${params.impactTime.toFixed(3)} s`;
+}
+
+function updateLiveTelemetry(t, projectile, target) {
+  const distance = distanceBetween(projectile, target);
+
+  ui.timeStat.textContent = `${t.toFixed(3)} s`;
+
+  ui.projectilePositionStat.textContent =
+    `x: ${projectile.x.toFixed(3)} m | y: ${projectile.y.toFixed(3)} m`;
+
+  ui.targetPositionStat.textContent =
+    `x: ${target.x.toFixed(3)} m | y: ${target.y.toFixed(3)} m`;
+
+  ui.distanceBetweenStat.textContent =
+    `${distance.toFixed(9)} m`;
 }
 
 function clampNumber(input, min, max) {
@@ -494,10 +504,6 @@ function clampNumber(input, min, max) {
   input.value = value;
 
   return value;
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
 }
 
 function distanceBetween(a, b) {

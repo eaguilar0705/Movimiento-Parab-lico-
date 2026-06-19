@@ -39,11 +39,7 @@ body {
   gap: 18px;
 }
 
-.hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 18px;
+.header {
   padding: 18px 8px 6px;
 }
 
@@ -68,13 +64,14 @@ p {
 }
 
 h1 {
-  font-size: clamp(2.3rem, 5vw, 4.6rem);
-  line-height: 0.9;
+  max-width: 1100px;
+  font-size: clamp(2.2rem, 5vw, 4.5rem);
+  line-height: 0.92;
   letter-spacing: -0.075em;
 }
 
-.hero p {
-  max-width: 860px;
+.header p {
+  max-width: 900px;
   margin-top: 12px;
   color: var(--muted);
   line-height: 1.55;
@@ -143,9 +140,9 @@ h1 {
   filter: drop-shadow(0 0 10px rgba(255, 224, 102, 0.9));
 }
 
-.monkey-path {
+.target-path {
   fill: none;
-  stroke: rgba(77, 184, 255, 0.9);
+  stroke: rgba(77, 184, 255, 0.95);
   stroke-width: 4;
   stroke-dasharray: 8 8;
   filter: drop-shadow(0 0 8px rgba(77, 184, 255, 0.75));
@@ -305,7 +302,7 @@ h1 {
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
 }
 
-.world-chip {
+.world-label {
   position: absolute;
   bottom: 16px;
   z-index: 16;
@@ -318,28 +315,28 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.world-chip.left {
+.world-label.left {
   left: 18px;
 }
 
-.world-chip.right {
+.world-label.right {
   right: 18px;
 }
 
 .dashboard {
   padding: 16px;
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 1.05fr 1fr;
   gap: 14px;
 }
 
-.params-grid {
+.controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(150px, 1fr));
   gap: 12px;
 }
 
-.input-card {
+.control-card {
   display: grid;
   gap: 8px;
   padding: 14px;
@@ -348,19 +345,19 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
-.input-card span {
+.control-card span {
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 800;
 }
 
-.number-row {
+.input-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.number-row input {
+.input-row input {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -373,8 +370,8 @@ h1 {
   font-weight: 950;
 }
 
-.number-row strong {
-  min-width: 42px;
+.input-row strong {
+  min-width: 48px;
   color: var(--yellow);
   font-size: 0.92rem;
 }
@@ -412,13 +409,19 @@ button:hover {
   border: 1px solid var(--border);
 }
 
+.danger-btn {
+  color: white;
+  background: rgba(255, 77, 109, 0.22);
+  border: 1px solid rgba(255, 77, 109, 0.5);
+}
+
 .telemetry {
   display: grid;
   grid-template-columns: repeat(2, minmax(140px, 1fr));
   gap: 12px;
 }
 
-.telemetry-card {
+.data-card {
   display: grid;
   gap: 6px;
   padding: 14px;
@@ -427,17 +430,17 @@ button:hover {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.telemetry-card.wide {
+.data-card.wide {
   grid-column: span 2;
 }
 
-.telemetry-card span {
+.data-card span {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 800;
 }
 
-.telemetry-card strong {
+.data-card strong {
   color: white;
   font-size: 0.95rem;
 }
@@ -459,6 +462,12 @@ button:hover {
   border-color: rgba(74, 222, 128, 0.35);
 }
 
+.status.stopped {
+  color: #fed7aa;
+  background: rgba(255, 159, 28, 0.14);
+  border-color: rgba(255, 159, 28, 0.38);
+}
+
 @media (max-width: 1020px) {
   .dashboard {
     grid-template-columns: 1fr;
@@ -474,10 +483,6 @@ button:hover {
     padding: 14px;
   }
 
-  .hero {
-    padding-inline: 2px;
-  }
-
   .simulation-card,
   .dashboard {
     border-radius: 22px;
@@ -487,12 +492,12 @@ button:hover {
     min-height: 460px;
   }
 
-  .params-grid,
+  .controls,
   .telemetry {
     grid-template-columns: 1fr;
   }
 
-  .telemetry-card.wide {
+  .data-card.wide {
     grid-column: auto;
   }
 
@@ -510,7 +515,7 @@ button:hover {
     height: 160px;
   }
 
-  .world-chip {
+  .world-label {
     font-size: 0.72rem;
   }
 }
