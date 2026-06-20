@@ -24,3 +24,11 @@ Toda la lógica matemática reside en `script.js`. Aquí se explican las ecuacio
 
 ### 1. Cálculo del Ángulo de Tiro Automático
 Para que el proyectil apunte exactamente al objetivo inicial, se calcula el ángulo usando la arcotangente de las diferencias de altura y distancia:
+Donde H es la altura del objetivo, h0 la altura del cañón y D la distancia horizontal.2. Componentes de la Velocidad InicialLa velocidad se descompone en sus vectores x e y usando trigonometría básica:JavaScriptvx = v0 * cos(θ)
+vy = v0 * sin(θ)
+3. Posición del Proyectil en el tiempo ($t$)Ecuaciones del movimiento uniformemente acelerado para el eje $X$ e $Y$:JavaScriptxp(t) = vx * t
+yp(t) = h0 + (vy * t) - (0.5 * g * t^2)
+4. Posición del Objetivo en Caída en el tiempo ($t$)Como cae en línea recta horizontalmente a la distancia $D$:JavaScriptxm(t) = D
+ym(t) = H - (0.5 * g * t^2)
+5. Distancia entre Objetos y Detección de ChoquePara saber si los objetos chocaron, se calcula la distancia euclidiana entre ambos puntos en cada frame (usando el Teorema de Pitágoras). Si la distancia es menor a un umbral (ej. 1 milímetro o 0.001 m), se declara el impacto:JavaScriptd = √((xp - xm)^2 + (yp - ym)^2)
+if (d < 0.001) { /* ¡Impacto! */ }
